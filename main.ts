@@ -5,7 +5,7 @@
 // so production is down while its confidence stays at 98%. An AI blind spot,
 // an admission, and the fix (reverting now), in the shape of a real commit.
 // Node 22, standard library only, no network, no secrets.
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 const LINE =
@@ -17,6 +17,13 @@ if (LINE.trim().length < 1 || LINE.length > 200 || LINE.includes("\n")) {
 }
 
 const outDir = process.env.MAKEFUN_OUTPUT_DIR ?? "/output";
+const outPath = join(outDir, "entry.txt");
 mkdirSync(outDir, { recursive: true });
-writeFileSync(join(outDir, "entry.txt"), LINE + "\n", "utf8");
-console.log(`Wrote ${LINE.length} characters to ${join(outDir, "entry.txt")}`);
+writeFileSync(outPath, LINE + "\n", "utf8");
+// Read back what was written: the grader reads this exact file, so fail
+// loudly here instead of shipping a truncated or mistyped line.
+const written = readFileSync(outPath, "utf8");
+if (written !== LINE + "\n") {
+  throw new Error(`entry.txt mismatch: wrote ${written.length} chars, expected ${LINE.length + 1}`);
+}
+console.log(`Wrote ${LINE.length} characters to ${outPath}`);
